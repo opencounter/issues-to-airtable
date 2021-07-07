@@ -5,15 +5,15 @@ require("dotenv").config();
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
   process.env.AIRTABLE_BASE
-)("Github Issues");
+)(process.env.AIRTABLE_BASE_NAME);
 const octokit = new (Octokit.plugin(paginateRest))({
-  auth: process.env.GH_API_TOKEN,
+  auth: process.env.GH_AIRTABLE_SYNC_TOKEN,
 });
 
 async function main() {
   const issueNumberToRecord = {};
   await base
-    .select({ view: "Ground Truth", fields: ["Number"] })
+    .select({ view: process.env.AIRTABLE_VIEW, fields: ["Number"] })
     .eachPage((records, fetchNextPage) => {
       records.forEach((record) => {
         issueNumberToRecord[record.get("Number")] = record.getId();
@@ -28,12 +28,12 @@ async function main() {
   for await (const response of octokit.paginate.iterator(
     "GET /repos/{owner}/{repo}/issues",
     {
-      owner: "ray-project",
-      repo: "ray",
-      labels: ["serve"],
+      owner: process.env.GH_OWNER,
+      repo: process.env.GH_REPO,
+      // labels: ["serve"],
       per_page: 100,
       state: "all",
-      pull_request: false,
+      pull_request: true,
     }
   )) {
     for (const issue of response.data) {
@@ -43,14 +43,17 @@ async function main() {
           Title: issue.title,
           Labels: issue.labels.map((label) => label.name),
           Milestone: issue.milestone?.title,
+          MilestoneDueDate: issue.milestone?.due_on,
+          MilestoneState: issue.milestone?.state,
           Link: issue.html_url,
           CreatedAt: issue.created_at,
           UpdatedAt: issue.updated_at,
           Body: issue.body,
           State: issue.state,
-          Priority: issue.labels.filter((label) =>
-            label.name.startsWith("P")
-          )[0]?.name,
+          Assignees: issue.assignees.map((user) => user.login),
+          //Priority: issue.labels.filter((label) =>
+            //label.name.endsWith(":high")
+          //)[0]?.name,
         },
       };
     }
