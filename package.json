@@ -10,7 +10,9 @@
     "airtable": "^0.10.1",
     "dotenv": "^8.2.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "prettier": "2.3.2"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -9,7 +9,7 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
 const octokit = graphql.defaults({
   headers: {
     authorization: `Bearer ${process.env.GH_AIRTABLE_SYNC_TOKEN}`,
-  }
+  },
 });
 
 const GH_QUERY = `
@@ -64,11 +64,13 @@ const GH_QUERY = `
 const GH_QUERY_VARS = {
   owner: process.env.GH_OWNER,
   repo: process.env.GH_REPO,
-}
+};
 
 // Recursive fn to handle pagination
 async function fetchIssues({ results, cursor } = { results: [] }) {
-  const { repository: { issues } } = await octokit(GH_QUERY, { cursor, ...GH_QUERY_VARS });
+  const {
+    repository: { issues },
+  } = await octokit(GH_QUERY, { cursor, ...GH_QUERY_VARS });
   results.push(...issues.nodes);
 
   if (issues.pageInfo.hasNextPage) {
@@ -80,7 +82,7 @@ async function fetchIssues({ results, cursor } = { results: [] }) {
 
 async function fetchRecords() {
   try {
-    const recordsByIssueNumber = {}
+    const recordsByIssueNumber = {};
     await base
       .select({ view: process.env.AIRTABLE_VIEW, fields: ["Number"] })
       .eachPage((records, fetchNextPage) => {
@@ -90,19 +92,20 @@ async function fetchRecords() {
         fetchNextPage();
       });
     return recordsByIssueNumber;
-  } catch(e) {
-    throw(e)
+  } catch (e) {
+    throw e;
   }
 }
 
-const transformIssues = issues => {
-  const PRODUCT_PROJECT = "OpenCounter: Product Backlog"
-  const ENG_PROJECT = "OpenCounter: Engineering Sprints"
-  const getColumnName = (issue, projectName) => (
-    issue.projectCards?.nodes.find((card) => card.project.name == PRODUCT_PROJECT)?.column.name
-  );
+const transformIssues = (issues) => {
+  const PRODUCT_PROJECT = "OpenCounter: Product Backlog";
+  const ENG_PROJECT = "OpenCounter: Engineering Sprints";
+  const getColumnName = (issue, projectName) =>
+    issue.projectCards?.nodes.find(
+      (card) => card.project.name == PRODUCT_PROJECT
+    )?.column.name;
 
-  transformed = {}
+  transformed = {};
   for (const issue of issues) {
     transformed[issue.number.toString()] = {
       fields: {
@@ -126,8 +129,8 @@ const transformIssues = issues => {
       },
     };
   }
-  return transformed
-}
+  return transformed;
+};
 
 async function updateRecordsWithIssues(recordsByIssueNumber, updatedRecords) {
   const airTableNumbers = new Set(Object.keys(recordsByIssueNumber));
@@ -158,16 +161,14 @@ async function updateRecordsWithIssues(recordsByIssueNumber, updatedRecords) {
   }
 }
 
-
 async function main() {
-  const [
-    recordsByIssueNumber,
-    issues
-  ] = await Promise.all([
+  const [recordsByIssueNumber, issues] = await Promise.all([
     fetchRecords(),
     fetchIssues(),
-  ])
-  console.log(`Fetched ${Object.keys(recordsByIssueNumber).length} records from airtable.`);
+  ]);
+  console.log(
+    `Fetched ${Object.keys(recordsByIssueNumber).length} records from airtable.`
+  );
   console.log(`Fetched ${Object.keys(issues).length} issues from github`);
 
   const updatedRecords = transformIssues(issues);
@@ -176,6 +177,5 @@ async function main() {
 
   return "Done!";
 }
-
 
 main().then(console.log).catch(console.error);
