@@ -97,13 +97,15 @@ async function fetchRecords() {
   }
 }
 
+const getColumnName = (issue, projectName) =>
+  issue.projectCards?.nodes.find(
+    (card) => card.project.name == projectName
+  )?.column.name;
+
 const transformIssues = (issues) => {
   const PRODUCT_PROJECT = "OpenCounter: Product Backlog";
   const ENG_PROJECT = "OpenCounter: Engineering Sprints";
-  const getColumnName = (issue, projectName) =>
-    issue.projectCards?.nodes.find(
-      (card) => card.project.name == PRODUCT_PROJECT
-    )?.column.name;
+
 
   transformed = {};
   for (const issue of issues) {
