@@ -12,49 +12,59 @@ const octokit = graphql.defaults({
   },
 });
 
-const GH_QUERY = `
-  query repoIssues($owner: String!, $repo: String!, $cursor: String) {
-    repository(owner:$owner, name:$repo) {
-      issues(first: 100, after: $cursor) {
-        totalCount
-        pageInfo {
-          endCursor
-          hasNextPage
-        }
+const GH_QUERY_NODES = `
+  number
+  title
+  createdAt
+  updatedAt
+  url
+  body
+  state
+  milestone {
+    title
+    state
+    dueOn
+  }
+  assignees(first: 10) {
+    nodes {
+      email
+    }
+  }
+  labels(first: 100) {
+    nodes {
+      name
+    }
+  }
+  projectCards {
+    nodes {
+      project {
+        name
+      }
+      column {
+        name
+      }
+    }
+  }`;
 
-        nodes {
-          number
-          title
-          createdAt
-          updatedAt
-          url
-          body
-          state
-          milestone {
-            title
-            state
-            dueOn
-          }
-          assignees(first: 10) {
-            nodes {
-              email
-            }
-          }
-          labels(first: 100) {
-            nodes {
-              name
-            }
-          }
-          projectCards {
-            nodes {
-              project {
-                name
-              }
-              column {
-                name
-              }
-            }
-          }
+const GH_QUERY = `
+  query repoIssues($cursor: String) {
+    search(
+      query: "created:>=2021-01-01 repo:${process.env.GH_OWNER}/${process.env.GH_REPO}",
+      type: ISSUE,
+      first: 100,
+      after: $cursor
+    ) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+
+      nodes {
+        ... on Issue {
+          ${GH_QUERY_NODES}
+        }
+        ... on PullRequest {
+          ${GH_QUERY_NODES}
         }
       }
     }
@@ -68,13 +78,11 @@ const GH_QUERY_VARS = {
 
 // Recursive fn to handle pagination
 async function fetchIssues({ results, cursor } = { results: [] }) {
-  const {
-    repository: { issues },
-  } = await octokit(GH_QUERY, { cursor, ...GH_QUERY_VARS });
-  results.push(...issues.nodes);
+  const { search } = await octokit(GH_QUERY, { cursor, ...GH_QUERY_VARS });
+  results.push(...search.nodes);
 
-  if (issues.pageInfo.hasNextPage) {
-    await fetchIssues({ results, cursor: issues.pageInfo.endCursor });
+  if (search.pageInfo.hasNextPage) {
+    await fetchIssues({ results, cursor: search.pageInfo.endCursor });
   }
 
   return results;
