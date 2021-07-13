@@ -27,7 +27,7 @@ const GH_QUERY_NODES = `
   }
   assignees(first: 10) {
     nodes {
-      email
+      login
     }
   }
   labels(first: 100) {
@@ -129,7 +129,7 @@ const transformIssues = (issues) => {
         Milestone: issue.milestone?.title,
         MilestoneState: issue.milestone?.state,
         MilestoneDueDate: issue.milestone?.dueOn,
-        Assignees: issue.assignees.nodes.map((user) => user.email),
+        Assignees: issue.assignees.nodes.map((user) => user.login),
         Labels: issue.labels.nodes.map((label) => label.name),
         ProductState: getColumnName(issue, PRODUCT_PROJECT),
         EngineeringState: getColumnName(issue, ENG_PROJECT),
