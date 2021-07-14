@@ -114,9 +114,29 @@ const transformIssues = (issues) => {
   const PRODUCT_PROJECT = "OpenCounter: Product Backlog";
   const ENG_PROJECT = "OpenCounter: Engineering Sprints";
 
-
   transformed = {};
   for (const issue of issues) {
+    const labels = []
+    const themes = []
+    const initiatives = []
+    const customers = []
+
+    for (const label of issue.labels.nodes) {
+      theme = label.name.split("theme:", 2)[1]
+      initiative = label.name.split("initiative:", 2)[1]
+      customer = label.name.split("feedback:", 2)[1]
+
+      if (theme) {
+        themes.push(theme);
+      } else if (initiative) {
+        initiatives.push(initiative);
+      } else if (customer) {
+        customers.push(customer);
+      } else {
+        labels.push(label.name);
+      }
+    }
+
     transformed[issue.number.toString()] = {
       fields: {
         Number: issue.number,
@@ -130,12 +150,12 @@ const transformIssues = (issues) => {
         MilestoneState: issue.milestone?.state,
         MilestoneDueDate: issue.milestone?.dueOn,
         Assignees: issue.assignees.nodes.map((user) => user.login),
-        Labels: issue.labels.nodes.map((label) => label.name),
         ProductState: getColumnName(issue, PRODUCT_PROJECT),
         EngineeringState: getColumnName(issue, ENG_PROJECT),
-        //Priority: issue.labels.filter((label) =>
-        //label.name.endsWith(":high")
-        //)[0]?.name,
+        Labels: labels,
+        Customers: customers,
+        Theme: themes[0], // one per issue
+        Initiative: initiatives[0], // one per issue
       },
     };
   }
