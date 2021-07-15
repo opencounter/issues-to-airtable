@@ -116,48 +116,53 @@ const transformIssues = (issues) => {
 
   transformed = {};
   for (const issue of issues) {
-    const labels = []
-    const themes = []
-    const initiatives = []
-    const customers = []
+    try {
+      const labels = []
+      const themes = []
+      const initiatives = []
+      const customers = []
 
-    for (const label of issue.labels.nodes) {
-      theme = label.name.split("theme:", 2)[1]
-      initiative = label.name.split("initiative:", 2)[1]
-      customer = label.name.split("feedback:", 2)[1]
+      for (const label of issue.labels.nodes) {
+        theme = label.name.split("theme:", 2)[1]
+        initiative = label.name.split("initiative:", 2)[1]
+        customer = label.name.split("feedback:", 2)[1]
 
-      if (theme) {
-        themes.push(theme);
-      } else if (initiative) {
-        initiatives.push(initiative);
-      } else if (customer) {
-        customers.push(customer);
-      } else {
-        labels.push(label.name);
+        if (theme) {
+          themes.push(theme);
+        } else if (initiative) {
+          initiatives.push(initiative);
+        } else if (customer) {
+          customers.push(customer);
+        } else {
+          labels.push(label.name);
+        }
       }
-    }
 
-    transformed[issue.number.toString()] = {
-      fields: {
-        Number: issue.number,
-        Title: issue.title,
-        CreatedAt: issue.createdAt,
-        UpdatedAt: issue.updatedAt,
-        Link: issue.url,
-        Body: issue.body,
-        State: issue.state,
-        Milestone: issue.milestone?.title,
-        MilestoneState: issue.milestone?.state,
-        MilestoneDueDate: issue.milestone?.dueOn,
-        Assignees: issue.assignees.nodes.map((user) => user.login),
-        ProductState: getColumnName(issue, PRODUCT_PROJECT),
-        EngineeringState: getColumnName(issue, ENG_PROJECT),
-        Labels: labels,
-        Customers: customers,
-        Theme: themes[0], // one per issue
-        Initiative: initiatives[0], // one per issue
-      },
-    };
+      transformed[issue.number.toString()] = {
+        fields: {
+          Number: issue.number,
+          Title: issue.title,
+          CreatedAt: issue.createdAt,
+          UpdatedAt: issue.updatedAt,
+          Link: issue.url,
+          Body: issue.body,
+          State: issue.state,
+          Milestone: issue.milestone?.title,
+          MilestoneState: issue.milestone?.state,
+          MilestoneDueDate: issue.milestone?.dueOn,
+          Assignees: issue.assignees.nodes.map((user) => user.login),
+          ProductState: getColumnName(issue, PRODUCT_PROJECT),
+          EngineeringState: getColumnName(issue, ENG_PROJECT),
+          Labels: labels,
+          Customers: customers,
+          Theme: themes[0], // one per issue
+          Initiative: initiatives[0], // one per issue
+        },
+      };
+    } catch(e) {
+      console.error("Error processing issue:", issue);
+      throw(e);
+    }
   }
   return transformed;
 };
