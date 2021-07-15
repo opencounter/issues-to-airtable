@@ -141,7 +141,7 @@ const transformIssues = (issues) => {
       transformed[issue.number.toString()] = {
         fields: {
           Number: issue.number,
-          Title: issue.title,
+          Title: `[${issue.title}](${issue.url})`,
           CreatedAt: issue.createdAt,
           UpdatedAt: issue.updatedAt,
           Link: issue.url,
