@@ -108,7 +108,7 @@ async function fetchRecords() {
 const getColumnName = (issue, projectName) =>
   issue.projectCards?.nodes.find(
     (card) => card.project.name == projectName
-  )?.column.name;
+  )?.column?.name;
 
 const transformIssues = (issues) => {
   const PRODUCT_PROJECT = "OpenCounter: Product Backlog";
