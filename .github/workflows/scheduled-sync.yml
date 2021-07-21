@@ -1,0 +1,29 @@
+name: Scheduled sync
+
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    # Every five minutes
+    - cron: "*/5 * * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+          cache: 'yarn'
+      - run: yarn install
+      - run: yarn start
+        env:
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_BASE: ${{ secrets.AIRTABLE_BASE }}
+          AIRTABLE_BASE_NAME: ${{ secrets.AIRTABLE_BASE_NAME }}
+          AIRTABLE_VIEW: ${{ secrets.AIRTABLE_VIEW }}
+          GH_AIRTABLE_SYNC_TOKEN: ${{ secrets.GH_AIRTABLE_SYNC_TOKEN }}
+          GH_OWNER: ${{ secrets.GH_OWNER }}
+          GH_REPO: ${{ secrets.GH_REPO }}
