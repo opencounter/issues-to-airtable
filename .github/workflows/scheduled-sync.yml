@@ -5,8 +5,8 @@ on:
     branches:
       - master
   schedule:
-    # Every five minutes
-    - cron: "*/5 * * * *"
+    # Every two minutes
+    - cron: "*/2 * * * *"
 
 jobs:
   build:
