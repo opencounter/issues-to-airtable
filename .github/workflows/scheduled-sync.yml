@@ -1,6 +1,7 @@
 name: Scheduled sync
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
