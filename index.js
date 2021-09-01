@@ -1,3 +1,5 @@
+require("util").inspect.defaultOptions.depth = 4;
+
 const Airtable = require("airtable");
 const { graphql } = require("@octokit/graphql");
 require("dotenv").config();
@@ -9,6 +11,8 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
 const octokit = graphql.defaults({
   headers: {
     authorization: `Bearer ${process.env.GH_AIRTABLE_SYNC_TOKEN}`,
+    // https://docs.github.com/en/graphql/overview/schema-previews#project-event-details-preview
+    accept: "application/vnd.github.starfox-preview+json",
   },
 });
 
@@ -44,7 +48,8 @@ const GH_QUERY_NODES = `
         name
       }
     }
-  }`;
+  }
+`;
 
 const GH_QUERY = `
   query repoIssues($cursor: String) {
@@ -70,6 +75,23 @@ const GH_QUERY = `
     }
   }
 `;
+
+/*
+ * TODO: timestamps for when issue 'starts' (moves to 'In Progress' column)
+ *
+ * issue(number: <NUMBER>) {
+ *   timelineItems(
+ *     first: 100,
+ *     itemTypes: MOVED_COLUMNS_IN_PROJECT_EVENT
+ *   ) {
+ *     nodes {
+ *       project { name }
+ *       createdAt
+ *       projectColumnName
+ *     }
+ *   }
+ * }
+ */
 
 const GH_QUERY_VARS = {
   owner: process.env.GH_OWNER,
@@ -110,6 +132,11 @@ const getColumnName = (issue, projectName) =>
     (card) => card.project.name == projectName
   )?.column?.name;
 
+const ENGINEERS = ["joshuabates", "jneen", "rtlong", "davidhampgonsalves"]
+const getEngineer = (issue) =>
+  issue.assignees.nodes.find((user) =>
+    ENGINEERS.includes(user.login))?.login
+
 const transformIssues = (issues) => {
   const PRODUCT_PROJECT = "OpenCounter: Product Backlog";
   const ENG_PROJECT = "OpenCounter: Engineering Sprints";
@@ -141,7 +168,7 @@ const transformIssues = (issues) => {
       transformed[issue.number.toString()] = {
         fields: {
           Number: issue.number,
-          Title: `[${issue.title}](${issue.url})`,
+          Title: `OC${issue.number}: ${issue.title}`,
           CreatedAt: issue.createdAt,
           UpdatedAt: issue.updatedAt,
           Link: issue.url,
@@ -151,6 +178,7 @@ const transformIssues = (issues) => {
           MilestoneState: issue.milestone?.state,
           MilestoneDueDate: issue.milestone?.dueOn,
           Assignees: issue.assignees.nodes.map((user) => user.login),
+          Engineer: getEngineer(issue),
           ProductState: getColumnName(issue, PRODUCT_PROJECT),
           EngineeringState: getColumnName(issue, ENG_PROJECT),
           Labels: labels,
