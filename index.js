@@ -132,7 +132,7 @@ const getColumnName = (issue, projectName) =>
     (card) => card.project.name == projectName
   )?.column?.name;
 
-const ENGINEERS = ["joshuabates", "jneen", "rtlong", "davidhampgonsalves"]
+const ENGINEERS = ["joshuabates", "jneen", "rtlong", "davidhampgonsalves", "sashadarling"]
 const getEngineer = (issue) =>
   issue.assignees.nodes.find((user) =>
     ENGINEERS.includes(user.login))?.login
