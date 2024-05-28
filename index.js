@@ -172,7 +172,7 @@ const transformIssues = (issues) => {
           Customers: customers,
           Theme: themes[0], // one per issue
           Initiative: initiatives[0], // one per issue
-          BugSeverity: severities[0], // one per issue
+          BugSeverity: priorities[0], // one per issue
         },
       };
     } catch(e) {
