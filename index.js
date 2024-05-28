@@ -54,7 +54,7 @@ const GH_QUERY_NODES = `
 const GH_QUERY = `
   query repoIssues($cursor: String) {
     search(
-      query: "created:>=2021-01-01 repo:${process.env.GH_OWNER}/${process.env.GH_REPO}",
+      query: "created:>=2013-01-01 repo:${process.env.GH_OWNER}/${process.env.GH_REPO}",
       type: ISSUE,
       first: 100,
       after: $cursor
@@ -75,23 +75,6 @@ const GH_QUERY = `
     }
   }
 `;
-
-/*
- * TODO: timestamps for when issue 'starts' (moves to 'In Progress' column)
- *
- * issue(number: <NUMBER>) {
- *   timelineItems(
- *     first: 100,
- *     itemTypes: MOVED_COLUMNS_IN_PROJECT_EVENT
- *   ) {
- *     nodes {
- *       project { name }
- *       createdAt
- *       projectColumnName
- *     }
- *   }
- * }
- */
 
 const GH_QUERY_VARS = {
   owner: process.env.GH_OWNER,
@@ -148,11 +131,13 @@ const transformIssues = (issues) => {
       const themes = []
       const initiatives = []
       const customers = []
+      const priorities = []
 
       for (const label of issue.labels.nodes) {
         theme = label.name.split("theme:", 2)[1]
         initiative = label.name.split("initiative:", 2)[1]
         customer = label.name.split("feedback:", 2)[1]
+        priority = label.name.split("p:", 2)[1]
 
         if (theme) {
           themes.push(theme);
@@ -160,6 +145,8 @@ const transformIssues = (issues) => {
           initiatives.push(initiative);
         } else if (customer) {
           customers.push(customer);
+        } else if (priority) {
+          priorities.push(priority);
         } else {
           labels.push(label.name);
         }
@@ -185,6 +172,7 @@ const transformIssues = (issues) => {
           Customers: customers,
           Theme: themes[0], // one per issue
           Initiative: initiatives[0], // one per issue
+          BugSeverity: severities[0], // one per issue
         },
       };
     } catch(e) {
