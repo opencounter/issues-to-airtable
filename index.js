@@ -5,7 +5,7 @@ const { graphql } = require("@octokit/graphql");
 require("dotenv").config();
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
-  process.env.AIRTABLE_BASE
+  process.env.AIRTABLE_BASE,
 )(process.env.AIRTABLE_BASE_NAME);
 
 const octokit = graphql.defaults({
@@ -75,7 +75,7 @@ const getGHQuery = (year) => {
         }
       }
     }
-  `
+  `;
 };
 
 const GH_QUERY_VARS = {
@@ -84,23 +84,30 @@ const GH_QUERY_VARS = {
 };
 
 // Recursive fn to handle pagination
-async function fetchIssuesForYear({ issues, cursor, year })  {
-  issues ||= []
-  const { search } = await octokit(getGHQuery(year), { cursor, ...GH_QUERY_VARS });
+async function fetchIssuesForYear({ issues, cursor, year }) {
+  issues ||= [];
+  const { search } = await octokit(getGHQuery(year), {
+    cursor,
+    ...GH_QUERY_VARS,
+  });
   issues.push(...search.nodes);
   if (search.pageInfo.hasNextPage) {
-    await fetchIssuesForYear({ issues, year, cursor: search.pageInfo.endCursor });
+    await fetchIssuesForYear({
+      issues,
+      year,
+      cursor: search.pageInfo.endCursor,
+    });
   }
   return issues;
-};
+}
 
 async function fetchIssues() {
-  let allIssues = []
+  let allIssues = [];
   years = generateYearsBetween(2013, new Date().getFullYear());
   for (const year of years) {
-    let issues = await fetchIssuesForYear({ year })
-    allIssues.push(issues)
-    console.log(year + ": " + issues.length + " issues fetched from GitHub")
+    let issues = await fetchIssuesForYear({ year });
+    allIssues.push(issues);
+    console.log(year + ": " + issues.length + " issues fetched from GitHub");
   }
   return allIssues.flat(Infinity);
 }
@@ -119,14 +126,18 @@ async function fetchRecords() {
 }
 
 const getColumnName = (issue, projectName) =>
-  issue.projectCards?.nodes.find(
-    (card) => card.project.name == projectName
-  )?.column?.name;
+  issue.projectCards?.nodes.find((card) => card.project.name == projectName)
+    ?.column?.name;
 
-const ENGINEERS = ["joshuabates", "jneen", "rtlong", "davidhampgonsalves", "sashadarling"]
+const ENGINEERS = [
+  "joshuabates",
+  "jneen",
+  "rtlong",
+  "davidhampgonsalves",
+  "sashadarling",
+];
 const getEngineer = (issue) =>
-  issue.assignees.nodes.find((user) =>
-    ENGINEERS.includes(user.login))?.login
+  issue.assignees.nodes.find((user) => ENGINEERS.includes(user.login))?.login;
 
 function generateYearsBetween(startYear, endYear) {
   let years = [];
@@ -137,7 +148,6 @@ function generateYearsBetween(startYear, endYear) {
   return years;
 }
 
-
 const transformIssues = (issues) => {
   const PRODUCT_PROJECT = "OpenCounter: Product Backlog";
   const ENG_PROJECT = "OpenCounter: Engineering Sprints";
@@ -145,17 +155,17 @@ const transformIssues = (issues) => {
   transformed = {};
   for (const issue of issues) {
     try {
-      const labels = []
-      const themes = []
-      const initiatives = []
-      const customers = []
-      const priorities = []
+      const labels = [];
+      const themes = [];
+      const initiatives = [];
+      const customers = [];
+      const priorities = [];
 
       for (const label of issue.labels.nodes) {
-        theme = label.name.split("theme:", 2)[1]
-        initiative = label.name.split("initiative:", 2)[1]
-        customer = label.name.split("feedback:", 2)[1]
-        priority = label.name.split("p:", 2)[1]
+        theme = label.name.split("theme:", 2)[1];
+        initiative = label.name.split("initiative:", 2)[1];
+        customer = label.name.split("feedback:", 2)[1];
+        priority = label.name.split("p:", 2)[1];
 
         if (theme) {
           themes.push(theme);
@@ -193,9 +203,9 @@ const transformIssues = (issues) => {
           BugSeverity: priorities[0], // one per issue
         },
       };
-    } catch(e) {
+    } catch (e) {
       console.error("Error processing issue:", issue);
-      throw(e);
+      throw e;
     }
   }
   return transformed;
@@ -236,7 +246,9 @@ async function main() {
     fetchIssues(),
   ]);
   console.log(
-    `Fetched ${Object.keys(recordsByIssueNumber).length} records from airtable.`
+    `Fetched ${
+      Object.keys(recordsByIssueNumber).length
+    } records from airtable.`,
   );
   console.log(`Fetched ${Object.keys(issues).length} total issues from github`);
 
