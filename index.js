@@ -51,30 +51,32 @@ const GH_QUERY_NODES = `
   }
 `;
 
-const GH_QUERY = `
-  query repoIssues($cursor: String) {
-    search(
-      query: "created:>=2013-01-01 repo:${process.env.GH_OWNER}/${process.env.GH_REPO}",
-      type: ISSUE,
-      first: 100,
-      after: $cursor
-    ) {
-      pageInfo {
-        endCursor
-        hasNextPage
-      }
-
-      nodes {
-        ... on Issue {
-          ${GH_QUERY_NODES}
+const getGHQuery = (year) => {
+  return `
+    query repoIssues($cursor: String) {
+      search(
+        query: "created:${year}-01-01..${year}-12-31 repo:${process.env.GH_OWNER}/${process.env.GH_REPO}",
+        type: ISSUE,
+        first: 100,
+        after: $cursor
+      ) {
+        pageInfo {
+          endCursor
+          hasNextPage
         }
-        ... on PullRequest {
-          ${GH_QUERY_NODES}
+
+        nodes {
+          ... on Issue {
+            ${GH_QUERY_NODES}
+          }
+          ... on PullRequest {
+            ${GH_QUERY_NODES}
+          }
         }
       }
     }
-  }
-`;
+  `
+};
 
 const GH_QUERY_VARS = {
   owner: process.env.GH_OWNER,
@@ -82,32 +84,38 @@ const GH_QUERY_VARS = {
 };
 
 // Recursive fn to handle pagination
-async function fetchIssues({ results, cursor } = { results: [] }) {
-  const { search } = await octokit(GH_QUERY, { cursor, ...GH_QUERY_VARS });
-  results.push(...search.nodes);
-
+async function fetchIssuesForYear({ issues, cursor, year })  {
+  issues ||= []
+  const { search } = await octokit(getGHQuery(year), { cursor, ...GH_QUERY_VARS });
+  issues.push(...search.nodes);
   if (search.pageInfo.hasNextPage) {
-    await fetchIssues({ results, cursor: search.pageInfo.endCursor });
+    await fetchIssuesForYear({ issues, year, cursor: search.pageInfo.endCursor });
   }
+  return issues;
+};
 
-  return results;
+async function fetchIssues() {
+  let allIssues = []
+  years = generateYearsBetween(2013, new Date().getFullYear());
+  for (const year of years) {
+    let issues = await fetchIssuesForYear({ year })
+    allIssues.push(issues)
+    console.log(year + ": " + issues.length + " issues fetched from GitHub")
+  }
+  return allIssues.flat(Infinity);
 }
 
 async function fetchRecords() {
-  try {
-    const recordsByIssueNumber = {};
-    await base
-      .select({ view: process.env.AIRTABLE_VIEW, fields: ["Number"] })
-      .eachPage((records, fetchNextPage) => {
-        records.forEach((record) => {
-          recordsByIssueNumber[record.get("Number")] = record.getId();
-        });
-        fetchNextPage();
+  const recordsByIssueNumber = {};
+  await base
+    .select({ fields: ["Number"] })
+    .eachPage((records, fetchNextPage) => {
+      records.forEach((record) => {
+        recordsByIssueNumber[record.get("Number")] = record.getId();
       });
-    return recordsByIssueNumber;
-  } catch (e) {
-    throw e;
-  }
+      fetchNextPage();
+    });
+  return recordsByIssueNumber;
 }
 
 const getColumnName = (issue, projectName) =>
@@ -119,6 +127,16 @@ const ENGINEERS = ["joshuabates", "jneen", "rtlong", "davidhampgonsalves", "sash
 const getEngineer = (issue) =>
   issue.assignees.nodes.find((user) =>
     ENGINEERS.includes(user.login))?.login
+
+function generateYearsBetween(startYear, endYear) {
+  let years = [];
+  for (var i = startYear; i <= endYear; i++) {
+    years.push(startYear);
+    startYear++;
+  }
+  return years;
+}
+
 
 const transformIssues = (issues) => {
   const PRODUCT_PROJECT = "OpenCounter: Product Backlog";
@@ -220,7 +238,7 @@ async function main() {
   console.log(
     `Fetched ${Object.keys(recordsByIssueNumber).length} records from airtable.`
   );
-  console.log(`Fetched ${Object.keys(issues).length} issues from github`);
+  console.log(`Fetched ${Object.keys(issues).length} total issues from github`);
 
   const updatedRecords = transformIssues(issues);
 
