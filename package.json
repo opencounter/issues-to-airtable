@@ -9,7 +9,7 @@
   "dependencies": {
     "@octokit/core": "^5.0.1",
     "@octokit/plugin-paginate-rest": "^9.0.0",
-    "@octokit/rest": "^20.0.2",
+    "@octokit/rest": "^22.0.0",
     "airtable": "^0.12.2",
     "dotenv": "^16.3.1"
   },
